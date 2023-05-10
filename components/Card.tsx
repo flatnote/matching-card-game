@@ -4,6 +4,7 @@ import React from "react";
 
 import pokeball from "@/public/images/pokeball.png";
 import { CardInterface } from "@/types/card";
+import { shimmer, toBase64 } from "@/utils/image";
 
 interface CardProps {
   onClick: (index: number) => void;
@@ -34,10 +35,22 @@ const Card: React.FC<CardProps> = ({
       onClick={handleClick}
     >
       <div className="card-face card-font-face">
-        <Image src={pokeball} alt="pokeball" className="rounded-sm aspect-square" />
+        <Image
+          src={pokeball}
+          alt="pokeball"
+          className="rounded-sm aspect-square"
+        />
       </div>
       <div className="card-face card-back-face">
-        <Image src={card.image} alt={card.type} className="rounded-sm aspect-square" />
+        <Image
+          src={card.image}
+          alt={card.type}
+          className="rounded-sm aspect-square"
+          placeholder="blur"
+          blurDataURL={`data:image/svg+xml;base64,${toBase64(
+            shimmer(60, 60)
+          )}`}
+        />
       </div>
     </div>
   );

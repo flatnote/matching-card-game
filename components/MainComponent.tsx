@@ -10,9 +10,17 @@ import {
   DialogContentText,
   DialogTitle,
 } from "@mui/material";
+import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import classNames from "classnames";
 import { Roboto } from "next/font/google";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+  },
+});
 
 import BulbasaurImage from "@/public/images/Bulbasaur.jpeg";
 import ButterFreeImage from "@/public/images/ButterFree.jpeg";
@@ -21,6 +29,7 @@ import PickachuImage from "@/public/images/Pickachu.png";
 import PidgettoImage from "@/public/images/Pidgetto.jpeg";
 import SquirtleImage from "@/public/images/Squirtle.jpeg";
 import { shuffleCards } from "@/utils/fisher-yates-shuffle";
+import useIsModernBrowser from "@/utils/useIsModernBrowser";
 
 const roboto = Roboto({
   weight: "400",
@@ -31,7 +40,21 @@ const robotoBold = Roboto({
   subsets: ["latin"],
 });
 
+const style = {
+  position: "absolute" as "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 400,
+  bgcolor: "background.paper",
+  border: "2px solid #000",
+  boxShadow: 24,
+  p: 4,
+};
+
 const MainComponent = () => {
+  const isModernBrowser = useIsModernBrowser();
+
   const [uniqueCardsArray, setUniqueCardsArray] = useState<CardInterface[]>([]);
   const [cards, setCards] = useState<CardInterface[]>([]);
   const [openCards, setOpenCards] = useState<any[]>([]);
@@ -167,13 +190,19 @@ const MainComponent = () => {
     setCards(shuffleCards(uniqueCardsArray.concat(uniqueCardsArray)));
   };
   return (
-    <main>
-      <div className="min-h-screen flex justify-center items-center flex-col gap-y-1.5">
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <main
+        className={`${
+          isModernBrowser ? "min-h-[100svh]" : "min-h-screen"
+        } flex justify-center items-center flex-col gap-y-1.5`}
+      >
         <header className="flex flex-col gap-y-1.5 text-center py-4">
-          <h3 className={robotoBold.className}>Play the Marching card game</h3>
+          <h1 className={`${robotoBold.className}`}>
+            Play the Marching card game
+          </h1>
           <div className={`${roboto.className} max-w-[360px]`}>
-            Select two cards with the same content consecutively to make them
-            vanish
+            Flip the cards to find the matching pairs
           </div>
         </header>
         <div
@@ -212,35 +241,35 @@ const MainComponent = () => {
           <Button
             color="primary"
             onClick={handleRestart}
-            className="bg-black dark:bg-white dark:hover:bg-gray-200"
+            className="bg-black dark:bg-white dark:hover:bg-gray-200 dark:text-black"
           >
             Restart
           </Button>
         </footer>
-      </div>
 
-      <Dialog
-        open={showModal}
-        disableEscapeKeyDown
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          Hurray!!! You completed the challenge
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            You completed the game in {moves} moves. Your best score is{" "}
-            {bestScore} moves.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleRestart} color="primary">
-            Restart
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </main>
+        <Dialog
+          open={showModal}
+          disableEscapeKeyDown
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            Hurray!!! You completed the challenge
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              You completed the game in {moves} moves. Your best score is{" "}
+              {bestScore} moves.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleRestart} color="primary">
+              Restart
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </main>
+    </ThemeProvider>
   );
 };
 

@@ -13,6 +13,7 @@ interface CardProps {
   isInactive?: boolean;
   isFlipped?: boolean;
   isDisabled?: boolean;
+  label: string;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -22,29 +23,35 @@ const Card: React.FC<CardProps> = ({
   isInactive,
   isFlipped,
   isDisabled,
+  label,
 }) => {
   const handleClick = () => {
-    !isFlipped && !isDisabled && onClick(index);
+    if (!isFlipped && !isDisabled && !isInactive) onClick(index);
   };
   return (
-    <div
+    <button
+      type="button"
       className={classNames("card aspect-square", {
         "is-flipped": isFlipped,
         "is-inactive": isInactive,
       })}
+      aria-label={`${label}: ${isInactive ? `${card.type}, matched` : isFlipped ? card.type : "face down"}`}
+      aria-pressed={Boolean(isFlipped)}
+      aria-hidden={isInactive || undefined}
+      disabled={isDisabled || isInactive}
       onClick={handleClick}
     >
       <div className="card-face card-font-face">
         <Image
           src={pokeball}
-          alt="pokeball"
+          alt=""
           className="rounded-sm aspect-square"
         />
       </div>
       <div className="card-face card-back-face">
         <Image
           src={card.image}
-          alt={card.type}
+          alt=""
           className="rounded-sm aspect-square"
           placeholder="blur"
           blurDataURL={`data:image/svg+xml;base64,${toBase64(
@@ -52,7 +59,7 @@ const Card: React.FC<CardProps> = ({
           )}`}
         />
       </div>
-    </div>
+    </button>
   );
 };
 

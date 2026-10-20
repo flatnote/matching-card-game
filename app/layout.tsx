@@ -1,10 +1,10 @@
 import { Analytics } from "@vercel/analytics/react";
 
-import "@/styles/globals.scss";
+import "@/styles/globals.css";
 
 export const metadata = {
-  title: "Marching Card Game",
-  description: "Marching card game create by next app",
+  title: "Matching Card Game",
+  description: "A Pokémon themed matching card memory game.",
 };
 
 export default function RootLayout({

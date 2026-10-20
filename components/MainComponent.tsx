@@ -2,25 +2,7 @@
 
 import Card from "@/components/Card";
 import { CardInterface } from "@/types/card";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-} from "@mui/material";
-import CssBaseline from "@mui/material/CssBaseline";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import classNames from "classnames";
-import { Roboto } from "next/font/google";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-  },
-});
 
 import BulbasaurImage from "@/public/images/Bulbasaur.jpeg";
 import ButterFreeImage from "@/public/images/ButterFree.jpeg";
@@ -29,41 +11,18 @@ import PickachuImage from "@/public/images/Pickachu.png";
 import PidgettoImage from "@/public/images/Pidgetto.jpeg";
 import SquirtleImage from "@/public/images/Squirtle.jpeg";
 import { shuffleCards } from "@/utils/fisher-yates-shuffle";
-import useIsModernBrowser from "@/utils/useIsModernBrowser";
-
-const roboto = Roboto({
-  weight: "400",
-  subsets: ["latin"],
-});
-const robotoBold = Roboto({
-  weight: "700",
-  subsets: ["latin"],
-});
-
-const style = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 400,
-  bgcolor: "background.paper",
-  border: "2px solid #000",
-  boxShadow: 24,
-  p: 4,
-};
 
 const MainComponent = () => {
-  const isModernBrowser = useIsModernBrowser();
-
   const [uniqueCardsArray, setUniqueCardsArray] = useState<CardInterface[]>([]);
   const [cards, setCards] = useState<CardInterface[]>([]);
-  const [openCards, setOpenCards] = useState<any[]>([]);
-  const [clearedCards, setClearedCards] = useState<any>({});
+  const [openCards, setOpenCards] = useState<number[]>([]);
+  const [clearedCards, setClearedCards] = useState<Record<string, boolean>>({});
   const [shouldDisableAllCards, setShouldDisableAllCards] = useState(false);
   const [moves, setMoves] = useState(0);
   const [showModal, setShowModal] = useState(false);
-  const [bestScore, setBestScore] = useState(Number.POSITIVE_INFINITY);
-  const timeout = useRef<any>(null);
+  const [bestScore, setBestScore] = useState<number | null>(null);
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const disable = () => {
     setShouldDisableAllCards(true);
@@ -78,7 +37,7 @@ const MainComponent = () => {
       uniqueCardsArray.length !== 0
     ) {
       setShowModal(true);
-      const highScore = Math.min(moves, bestScore);
+      const highScore = Math.min(moves, bestScore ?? Number.POSITIVE_INFINITY);
       setBestScore(highScore);
       localStorage.setItem("bestScore", highScore.toString());
     }
@@ -87,25 +46,32 @@ const MainComponent = () => {
   // Check if both the cards have same type. If they do, mark them inactive
   const evaluate = useCallback(() => {
     const [first, second] = openCards;
-    enable();
     if (cards[first].type === cards[second].type) {
-      setClearedCards((prev: any) => ({ ...prev, [cards[first].type]: true }));
+      setClearedCards((prev) => ({ ...prev, [cards[first].type]: true }));
       setOpenCards([]);
+      enable();
       return;
     }
-    // Flip cards after a 500ms duration
+    // Keep the board locked until the mismatched cards have flipped back.
     timeout.current = setTimeout(() => {
       setOpenCards([]);
+      enable();
+      timeout.current = null;
     }, 500);
   }, [cards, openCards]);
 
-  const handleCardClick = (index: any) => {
+  const handleCardClick = (index: number) => {
+    if (shouldDisableAllCards || clearedCards[cards[index]?.type]) return;
+
     if (openCards.length === 1) {
       setOpenCards((prev) => [...prev, index]);
       setMoves((moves) => moves + 1);
       disable();
     } else {
-      clearTimeout(timeout.current);
+      if (timeout.current) {
+        clearTimeout(timeout.current);
+        timeout.current = null;
+      }
       setOpenCards([index]);
     }
   };
@@ -146,21 +112,24 @@ const MainComponent = () => {
   }, []);
 
   useEffect(() => {
-    let timeout: string | number | NodeJS.Timeout | null | undefined = null;
+    let evaluationTimeout: ReturnType<typeof setTimeout> | null = null;
     if (openCards.length === 2) {
-      timeout = setTimeout(evaluate, 300);
+      evaluationTimeout = setTimeout(evaluate, 300);
     }
     return () => {
-      if (timeout) {
-        clearTimeout(timeout);
+      if (evaluationTimeout) {
+        clearTimeout(evaluationTimeout);
       }
     };
   }, [evaluate, openCards]);
 
   const setUpDefaultBestScore = () => {
     const defaultBestScore = localStorage.getItem("bestScore");
-    if (defaultBestScore) {
-      setBestScore(JSON.parse(defaultBestScore));
+    if (defaultBestScore !== null) {
+      const parsedBestScore = Number(defaultBestScore);
+      if (Number.isSafeInteger(parsedBestScore) && parsedBestScore > 0) {
+        setBestScore(parsedBestScore);
+      }
     }
   };
 
@@ -172,15 +141,30 @@ const MainComponent = () => {
     checkCompletion();
   }, [checkCompletion, clearedCards]);
 
-  const checkIsFlipped = (index: any) => {
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (showModal && !dialog.open) {
+      dialog.showModal();
+    } else if (!showModal && dialog.open) {
+      dialog.close();
+    }
+  }, [showModal]);
+
+  const checkIsFlipped = (index: number) => {
     return openCards.includes(index);
   };
 
-  const checkIsInactive = (card: { type: string | number }) => {
+  const checkIsInactive = (card: CardInterface) => {
     return Boolean(clearedCards[card.type]);
   };
 
   const handleRestart = () => {
+    if (timeout.current) {
+      clearTimeout(timeout.current);
+      timeout.current = null;
+    }
     setClearedCards({});
     setOpenCards([]);
     setShowModal(false);
@@ -189,87 +173,151 @@ const MainComponent = () => {
     // set a shuffled deck of cards
     setCards(shuffleCards(uniqueCardsArray.concat(uniqueCardsArray)));
   };
+
+  const pairsFound = Object.keys(clearedCards).length;
+  const progress = uniqueCardsArray.length
+    ? (pairsFound / uniqueCardsArray.length) * 100
+    : 0;
+
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <main
-        className={`${
-          isModernBrowser ? "min-h-[100svh]" : "min-h-screen"
-        } flex justify-center items-center flex-col gap-y-1.5`}
-      >
-        <header className="flex flex-col gap-y-1.5 text-center py-4">
-          <h1 className={`${robotoBold.className}`}>
-            Play the Marching card game
-          </h1>
-          <div className={`${roboto.className} max-w-[360px]`}>
-            Flip the cards to find the matching pairs
-          </div>
-        </header>
-        <div
-          className={classNames(
-            "grid grid-cols-4 min-w-[360px] min-h-[360px] max-w-[720px] gap-5 items-stretch p-4",
-            "bg-gray-800 shadow-md rounded-md",
-            "md:min-w-[480px] md:min-h-[480px]"
-          )}
-        >
-          {cards.map((card: CardInterface, index: number) => {
-            return (
-              <Card
-                key={index}
-                card={card}
-                index={index}
-                isDisabled={shouldDisableAllCards}
-                isInactive={checkIsInactive(card)}
-                isFlipped={checkIsFlipped(index)}
-                onClick={handleCardClick}
-              />
-            );
-          })}
+      <main className="game-shell min-h-screen">
+        <div className="game-container">
+          <header className="topbar">
+            <a className="brand" href="#game" aria-label="Pokémon Memory home">
+              <span className="brand-symbol" aria-hidden="true">
+                ✦
+              </span>
+              <span>
+                POKÉMON <b>MEMORY CLUB</b>
+              </span>
+            </a>
+            <div className="challenge-tag">
+              <span /> TRAINER CHALLENGE&nbsp; / &nbsp;01
+            </div>
+          </header>
+
+          <section className="intro" aria-labelledby="game-title">
+            <div className="intro-copy">
+              <p className="eyebrow">A LITTLE TEST OF YOUR MEMORY</p>
+              <h1 id="game-title">
+                Memory <span>Master</span>
+              </h1>
+              <p className="intro-description">
+                Find every Pokémon pair. Choose two cards each turn and see how
+                many moves it takes to complete your collection.
+              </p>
+            </div>
+            <div
+              className="collection-card"
+              aria-label={`${pairsFound} of ${uniqueCardsArray.length} pairs found`}
+            >
+              <div className="collection-heading">
+                <span>YOUR COLLECTION</span>
+                <span aria-hidden="true">✦</span>
+              </div>
+              <div className="collection-count">
+                <strong>{pairsFound.toString().padStart(2, "0")}</strong>
+                <span>
+                  / {uniqueCardsArray.length.toString().padStart(2, "0")} PAIRS
+                </span>
+              </div>
+              <div
+                className="progress-track"
+                role="progressbar"
+                aria-label="Pairs found"
+                aria-valuemin={0}
+                aria-valuemax={uniqueCardsArray.length}
+                aria-valuenow={pairsFound}
+                aria-valuetext={`${pairsFound} of ${uniqueCardsArray.length} pairs found`}
+              >
+                <span style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          </section>
+
+          <section className="game-panel" id="game" aria-label="Matching card game">
+            <div className="board-heading">
+              <div>
+                <span className="live-dot" /> THE FIELD
+              </div>
+              <span>12 CARDS <i>·</i> 6 PAIRS</span>
+            </div>
+            <div className="board-grid">
+              {cards.map((card: CardInterface, index: number) => (
+                <Card
+                  key={index}
+                  card={card}
+                  index={index}
+                  isDisabled={shouldDisableAllCards}
+                  isInactive={checkIsInactive(card)}
+                  isFlipped={checkIsFlipped(index)}
+                  label={`Card ${index + 1}`}
+                  onClick={handleCardClick}
+                />
+              ))}
+            </div>
+            <footer className="game-footer">
+              <div className="score-strip" aria-live="polite">
+                <div className="score-item">
+                  <span className="score-icon moves-icon" aria-hidden="true">
+                    ↗
+                  </span>
+                  <span className="score-label">MOVES</span>
+                  <strong>{moves.toString().padStart(2, "0")}</strong>
+                </div>
+                <div className="score-divider" />
+                <div className="score-item">
+                  <span className="score-icon best-icon" aria-hidden="true">
+                    ✦
+                  </span>
+                  <span className="score-label">BEST</span>
+                  <strong>{bestScore ?? "—"}</strong>
+                </div>
+                <div className="score-divider" />
+                <div className="score-item">
+                  <span className="score-icon pairs-icon" aria-hidden="true">
+                    ◉
+                  </span>
+                  <span className="score-label">PAIRS</span>
+                  <strong>
+                    {pairsFound}
+                    <small> / {uniqueCardsArray.length}</small>
+                  </strong>
+                </div>
+              </div>
+              <button className="restart-button focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" onClick={handleRestart} type="button">
+                <span aria-hidden="true">↻</span> NEW GAME
+              </button>
+            </footer>
+          </section>
+          <p className="game-hint">
+            <span aria-hidden="true">✦</span> A good trainer remembers every
+            encounter.
+          </p>
         </div>
 
-        <footer className="flex gap-5 items-center">
-          <div className="score flex gap-6 py-8">
-            <div className="flex gap-1">
-              <div>Best Score</div>
-              <div>{bestScore}</div>
-            </div>
-            <div className="flex gap-1">
-              <div>Your moves</div>
-              <div>{moves}</div>
-            </div>
-          </div>
-          <Button
-            color="primary"
-            onClick={handleRestart}
-            className="bg-black dark:bg-white dark:hover:bg-gray-200 dark:text-black"
-          >
-            Restart
-          </Button>
-        </footer>
-
-        <Dialog
-          open={showModal}
-          disableEscapeKeyDown
+        <dialog
+          ref={dialogRef}
+          className="win-dialog w-[min(92vw,28rem)] rounded-2xl border border-white/10 bg-slate-900 p-6 text-slate-100 shadow-2xl backdrop:bg-slate-950/75"
           aria-labelledby="alert-dialog-title"
           aria-describedby="alert-dialog-description"
+          onCancel={(event) => event.preventDefault()}
         >
-          <DialogTitle id="alert-dialog-title">
-            Hurray!!! You completed the challenge
-          </DialogTitle>
-          <DialogContent>
-            <DialogContentText id="alert-dialog-description">
-              You completed the game in {moves} moves. Your best score is{" "}
-              {bestScore} moves.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleRestart} color="primary">
-              Restart
-            </Button>
-          </DialogActions>
-        </Dialog>
+          <h2 id="alert-dialog-title">Collection complete!</h2>
+          <p id="alert-dialog-description">
+              You found every pair in {moves} moves. Your best score is {bestScore} moves.
+          </p>
+          <div className="dialog-actions">
+            <button
+              className="restart-button dialog-restart focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              onClick={handleRestart}
+              type="button"
+            >
+              <span aria-hidden="true">↻</span> PLAY AGAIN
+            </button>
+          </div>
+        </dialog>
       </main>
-    </ThemeProvider>
   );
 };
 

@@ -89,19 +89,25 @@ button { font: inherit; }
 .game-hint { margin: 18px 0 0; color: #77849b; text-align: center; font-size: 10px; letter-spacing: .04em; }
 .game-hint span { padding-right: 5px; color: var(--yellow); }
 
-.card { width: 100%; height: 100%; aspect-ratio: 1; position: relative; padding: 0; overflow: visible; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; color: inherit; background: transparent; box-shadow: 0 7px 14px rgba(0,0,0,.22); cursor: pointer; perspective: 800px; -webkit-perspective: 800px; }
-.card-flipper { position: absolute; inset: 0; border-radius: inherit; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; transition: transform .38s cubic-bezier(.2,.75,.2,1); }
+.card { width: 100%; height: 100%; aspect-ratio: 1; position: relative; padding: 0; overflow: visible; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; color: inherit; background: transparent; box-shadow: 0 7px 14px rgba(0,0,0,.22); cursor: pointer; }
+.card-flipper { position: absolute; inset: 0; border-radius: inherit; transform-origin: center; }
 .card:disabled { cursor: default; }
-.card:not(:disabled):hover { box-shadow: 0 10px 22px rgba(0,0,0,.35), 0 0 0 2px rgba(99,213,208,.3); }
-.card-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: translateZ(0); -webkit-transform: translateZ(0); }
+.card-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 14px; transition: opacity .16s ease, visibility .16s ease; }
+.card-font-face { opacity: 1; visibility: visible; }
 .card-face img { width: 100%; height: 100%; object-fit: cover; }
 .card-font-face { background: radial-gradient(circle at 50% 46%, #354f78 0, #263a60 42%, #202e4c 100%); }
 .card-font-face::before { position: absolute; inset: 9%; border: 1px solid rgba(224,236,255,.12); border-radius: 11px; content: ""; }
 .card-font-face::after { position: absolute; width: 68%; aspect-ratio: 1; border: 1px solid rgba(211,227,255,.08); border-radius: 50%; content: ""; }
 .card-font-face img { position: relative; z-index: 1; width: 42%; height: 42%; object-fit: contain; filter: drop-shadow(0 4px 7px rgba(0,0,0,.2)); }
-.card-back-face { transform: rotateY(180deg); background: #e9e8e0; }
+.card-back-face { opacity: 0; visibility: hidden; background: #e9e8e0; }
 .card-back-face img { padding: 5%; }
-.card.is-flipped .card-flipper { transform: rotateY(180deg); }
+.card.is-flipped .card-font-face { opacity: 0; visibility: hidden; }
+.card.is-flipped .card-back-face { opacity: 1; visibility: visible; }
+.card.is-flipped .card-flipper { animation: card-flip-reveal .38s cubic-bezier(.2,.75,.2,1); }
+@keyframes card-flip-reveal {
+  0%, 100% { transform: scaleX(1); }
+  45%, 55% { transform: scaleX(.04); }
+}
 .card.is-inactive { opacity: 0; pointer-events: none; }
 .card:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
 

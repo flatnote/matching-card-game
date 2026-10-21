@@ -41,23 +41,25 @@ const Card: React.FC<CardProps> = ({
       disabled={isDisabled || isInactive}
       onClick={handleClick}
     >
-      <div className="card-face card-font-face">
-        <Image
-          src={pokeball}
-          alt=""
-          className="rounded-sm aspect-square"
-        />
-      </div>
-      <div className="card-face card-back-face">
-        <Image
-          src={card.image}
-          alt=""
-          className="rounded-sm aspect-square"
-          placeholder="blur"
-          blurDataURL={`data:image/svg+xml;base64,${toBase64(
-            shimmer(60, 60)
-          )}`}
-        />
+      <div className="card-flipper">
+        <div className="card-face card-font-face">
+          <Image
+            src={pokeball}
+            alt=""
+            className="rounded-sm aspect-square"
+          />
+        </div>
+        <div className="card-face card-back-face">
+          <Image
+            src={card.image}
+            alt=""
+            className="rounded-sm aspect-square"
+            placeholder="blur"
+            blurDataURL={`data:image/svg+xml;base64,${toBase64(
+              shimmer(60, 60)
+            )}`}
+          />
+        </div>
       </div>
     </button>
   );
